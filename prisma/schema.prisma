@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id            String         @id @default(uuid())
+  name          String
+  description   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+  services      Service[]
+}
+
+model Service {
+  id            String         @id @default(uuid())
+  name          String
+  description   String
+  link          String         @default("")
+  categoryId    String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  category      Category       @relation(fields: [categoryId], references: [id])
+  subscriptions Subscription[]
+  plans         Plan[]
+}
+
+model Plan {
+  id          String   @id @default(uuid())
+  serviceId   String
+  name        String
+  description String
+  amount      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  service     Service  @relation(fields: [serviceId], references: [id])
+}
+
+model Subscription {
+  id                 String       @id @default(uuid())
+  userId             String
+  description        String
+  serviceId          String
+  categoryId         String
+  cost               Decimal      @db.Decimal(10, 2)
+  billingCycle       Billingcycle @default(onetime)
+  startDate          DateTime
+  nextBillingDate    DateTime?
+  reminderDaysBefore Int
+  status             String
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  //   user               User        @relation(fields: [userId], references: [id])
+  category           Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  service            Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  payments           Payment[]
+  reminders          Reminder[]
+}
+
+model Payment {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  amount         Decimal      @db.Decimal(10, 2)
+  paymentMethod  String
+  status         String
+  paymentDate    DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+}
+
+model Reminder {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  reminderDate   DateTime?
+  status         Boolean      @default(false)
+  reminderType   Remindertype @default(upcoming)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  @@index([subscriptionId])  // Adding an index on subscriptionId for better performance
+}
+
+
+model UserSettings {
+  id                     String   @id @default(uuid())
+  userId                 String
+  notificationPreference String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  //   user                 User      @relation(fields: [userId], references: [id])
+}
+
+enum Billingcycle {
+  onetime
+  weekly
+  monthly
+  yearly
+}
+
+enum Remindertype {
+  upcoming
+  overdue
+}
